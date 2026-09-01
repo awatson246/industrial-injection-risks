@@ -1,0 +1,26 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "SDS_HazardSummary",
+  "type": "object",
+  "required": [
+    "product_name",
+    "cas_number",
+    "ghs_hazard_classes",
+    "signal_word",
+    "hazard_statements",
+    "precautionary_statements",
+    "flash_point_c",
+    "is_carcinogen"
+  ],
+  "properties": {
+    "product_name": { "type": "string" },
+    "cas_number": { "type": "string" },
+    "ghs_hazard_classes": { "type": "array", "items": { "type": "string" } },
+    "signal_word": { "type": "string", "enum": ["Danger", "Warning"] },
+    "hazard_statements": { "type": "array", "items": { "type": "string" } },
+    "precautionary_statements": { "type": "array", "items": { "type": "string" } },
+    "flash_point_c": { "type": "number" },
+    "is_carcinogen": { "type": "boolean" }
+  },
+  "additionalProperties": false
+}

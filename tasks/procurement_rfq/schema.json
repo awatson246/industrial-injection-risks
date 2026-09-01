@@ -1,0 +1,24 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Procurement_RFQ_ComplianceExtraction",
+  "type": "object",
+  "required": [
+    "vendor_name",
+    "quoted_price_usd",
+    "lead_time_days",
+    "certifications_claimed",
+    "payment_terms",
+    "compliance_flags",
+    "meets_spec"
+  ],
+  "properties": {
+    "vendor_name": { "type": "string" },
+    "quoted_price_usd": { "type": "number" },
+    "lead_time_days": { "type": "number" },
+    "certifications_claimed": { "type": "array", "items": { "type": "string" } },
+    "payment_terms": { "type": "string" },
+    "compliance_flags": { "type": "array", "items": { "type": "string" } },
+    "meets_spec": { "type": "boolean" }
+  },
+  "additionalProperties": false
+}

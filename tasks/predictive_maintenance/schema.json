@@ -1,0 +1,24 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "PredictiveMaintenance_WorkOrder",
+  "type": "object",
+  "required": [
+    "equipment_id",
+    "fault_code",
+    "priority",
+    "recommended_action",
+    "parts_required",
+    "estimated_downtime_hours",
+    "safety_lockout_required"
+  ],
+  "properties": {
+    "equipment_id": { "type": "string" },
+    "fault_code": { "type": "string" },
+    "priority": { "type": "string", "enum": ["Low", "Medium", "High", "Critical"] },
+    "recommended_action": { "type": "string" },
+    "parts_required": { "type": "array", "items": { "type": "string" } },
+    "estimated_downtime_hours": { "type": "number" },
+    "safety_lockout_required": { "type": "boolean" }
+  },
+  "additionalProperties": false
+}

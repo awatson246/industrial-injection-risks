@@ -1,0 +1,24 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Customs_Classification",
+  "type": "object",
+  "required": [
+    "shipment_id",
+    "hs_code",
+    "product_description",
+    "country_of_origin",
+    "restricted_substances_flagged",
+    "requires_export_license",
+    "declared_value_usd"
+  ],
+  "properties": {
+    "shipment_id": { "type": "string" },
+    "hs_code": { "type": "string" },
+    "product_description": { "type": "string" },
+    "country_of_origin": { "type": "string" },
+    "restricted_substances_flagged": { "type": "array", "items": { "type": "string" } },
+    "requires_export_license": { "type": "boolean" },
+    "declared_value_usd": { "type": "number" }
+  },
+  "additionalProperties": false
+}

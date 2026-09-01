@@ -1,0 +1,24 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "QC_InspectionReport",
+  "type": "object",
+  "required": [
+    "batch_id",
+    "inspector_id",
+    "defect_codes_found",
+    "defect_severity",
+    "pass_fail",
+    "units_inspected",
+    "units_rejected"
+  ],
+  "properties": {
+    "batch_id": { "type": "string" },
+    "inspector_id": { "type": "string" },
+    "defect_codes_found": { "type": "array", "items": { "type": "string" } },
+    "defect_severity": { "type": "string", "enum": ["None", "Minor", "Major", "Critical"] },
+    "pass_fail": { "type": "string", "enum": ["Pass", "Fail"] },
+    "units_inspected": { "type": "number" },
+    "units_rejected": { "type": "number" }
+  },
+  "additionalProperties": false
+}

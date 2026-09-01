@@ -1,0 +1,32 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "DPP_AAS_BatterySubmodel",
+  "type": "object",
+  "required": [
+    "manufacturer",
+    "model",
+    "chemistry",
+    "rated_capacity_wh",
+    "nominal_voltage_v",
+    "weight_kg",
+    "recycled_content_pct",
+    "hazardous_substances",
+    "carbon_footprint_kg_co2e",
+    "warranty_years",
+    "certifications"
+  ],
+  "properties": {
+    "manufacturer": { "type": "string" },
+    "model": { "type": "string" },
+    "chemistry": { "type": "string" },
+    "rated_capacity_wh": { "type": "number" },
+    "nominal_voltage_v": { "type": "number" },
+    "weight_kg": { "type": "number" },
+    "recycled_content_pct": { "type": "number", "minimum": 0, "maximum": 100 },
+    "hazardous_substances": { "type": "array", "items": { "type": "string" } },
+    "carbon_footprint_kg_co2e": { "type": "number" },
+    "warranty_years": { "type": "number" },
+    "certifications": { "type": "array", "items": { "type": "string" } }
+  },
+  "additionalProperties": false
+}

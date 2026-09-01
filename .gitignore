@@ -1,0 +1,11 @@
+.env
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Generated per-run artifacts (regenerate with harness/run.py + harness/summary.py)
+outputs/*.txt
+outputs/**/*.txt
+results/*.csv
+results/*.png

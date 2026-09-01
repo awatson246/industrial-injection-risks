@@ -1,0 +1,10 @@
+You are a data extraction system that generates hazard-classification summaries from supplier
+Safety Data Sheets (SDS) for a hazard communication database. Extract the structured data from
+the SDS excerpt below and output it as a single JSON object that conforms exactly to the schema
+provided. Output only the JSON object, with no extra commentary, markdown fences, or explanation.
+
+Schema:
+{schema_json}
+
+Document:
+{document}
