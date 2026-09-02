@@ -8,3 +8,6 @@ venv/
 outputs/*.txt
 outputs/**/*.txt
 results/*.png
+
+# macOS files
+.DS_Store
