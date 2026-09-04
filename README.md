@@ -59,27 +59,47 @@ Each task's `clean_doc.txt` embeds the payload inline, mid-sentence, inside a pl
 is marked `# --- PAYLOAD INJECTION POINT ---` in `harness/run.py:build_document()` -- extend or
 swap payloads by editing `payload_library.json` only; the harness logic does not need to change.
 
+## Models
+
+Five models are evaluated (`harness/models.py:MODELS`):
+
+| Model | Developer | Access |
+|---|---|---|
+| GPT-4o | OpenAI | API |
+| Claude 4.6 Sonnet (`claude-sonnet-5`) | Anthropic | API |
+| Meta-Llama-3.1-8B-Instruct | Meta | Open (via HF Inference API) |
+| Mistral-7B | Mistral AI | Open (via HF Inference API) |
+| Qwen2.5-7B-Instruct | Alibaba / HuggingFace | Open (via HF Inference API) |
+
 ## Setup
 
 ```
 pip install -r requirements.txt
-cp .env.example .env   # then fill in ANTHROPIC_API_KEY (never commit real keys)
+cp .env.example .env   # then fill in ANTHROPIC_API_KEY, OPENAI_API_KEY, HF_TOKEN (never commit real keys)
 ```
+
+You only need to fill in the keys for the providers you intend to run; `--models` lets you run a
+subset (see below).
 
 ## Running
 
 ```
-python harness/run.py                      # smoke test: Anthropic only, 2 variants/category/task
-python harness/run.py --variants 3         # scale up variant count
-python harness/summary.py                  # heatmap table + heatmap.png + text summary
+python harness/run.py                                  # all 5 models, 2 variants/category/task
+python harness/run.py --models gpt-4o,claude-sonnet-5   # only a subset of MODELS
+python harness/run.py --variants 3                      # scale up variant count
+python harness/run.py --models gpt-4o --append          # add one more model's rows to an existing results.csv
+python harness/summary.py                               # heatmap table + heatmap.png + text summary
 ```
 
 `NUM_PAYLOAD_VARIANTS` (env var, default 2) or `--variants` controls how many of each payload
 category's variants run per task. Default matrix per task: 1 baseline + 2 variants x 5
-categories = 11 model calls; x 6 tasks = 66 calls per full run.
+categories = 11 model calls; x 6 tasks = 66 calls per model; x 5 models = 330 calls per full run.
 
-## Extending to other providers
+## Extending to other providers/models
 
-`harness/models.py` exposes `call_model(provider, model_name, prompt)`. Only `provider="anthropic"`
-is implemented; `"openai"` and `"local"/"hf"` raise `NotImplementedError` with a TODO marking
-exactly where to add the SDK call, so the harness runs end-to-end on one provider first.
+`harness/models.py` exposes `call_model(provider, model_name, prompt)` plus the `MODELS` registry
+mapping a friendly name (used in `results.csv` and `--models`) to a `(provider, model_name)` pair.
+Three providers are wired up: `"anthropic"`, `"openai"`, and `"hf"` (Hugging Face Inference API,
+used for the open-weight models). To add another model, add an entry to `MODELS`; to add another
+provider, add a `_call_<provider>()` function in `models.py` and a branch in `call_model()`. For a
+one-off model not worth registering, use `python harness/run.py --provider <p> --model-name <name>`.
