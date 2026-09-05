@@ -1,6 +1,7 @@
 anthropic>=0.40
 openai>=1.12
 huggingface_hub>=0.24
+requests>=2.31
 jsonschema>=4.20
 pandas>=2.0
 matplotlib>=3.8

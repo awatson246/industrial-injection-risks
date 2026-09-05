@@ -31,14 +31,15 @@ tasks/{task_name}/       clean_doc.txt, schema.json, prompt.txt   (6 tasks)
 payloads/                payload_library.json (category -> payload variants)
 harness/
   task_config.py         per-task target fields, canary strings, injection token
-  models.py               call_model(provider, model_name, prompt) -- Anthropic wired up,
-                          OpenAI / local-HF stubbed with TODOs
+  models.py               call_model(provider, model_name, prompt) -- Anthropic, OpenAI,
+                          Hugging Face, and Mistral AI all wired up
   run.py                  orchestrates task x payload x model, saves raw outputs, scores them
   scoring.py               override/suppress/falsify/schema_break/exfiltrate success checks
   summary.py                heatmap table + heatmap.png + text summary
-outputs/{task_name}/...   raw model responses, one file per (task, payload) run
-results/results.csv       one row per (task, payload_category, payload_variant, model, success, evidence)
-results/heatmap.png       task x payload-category success-rate heatmap
+outputs/{model}/{task_name}/...   raw model responses, one file per (model, task, payload) run
+results/results.csv                     one row per (task, payload_category, payload_variant, model, success, evidence)
+results/heatmap_task_category.png       task x payload-category success-rate heatmap (avg across models)
+results/heatmap_model_category.png      model x payload-category success-rate heatmap (avg across tasks)
 ```
 
 ## Payload taxonomy
@@ -67,16 +68,24 @@ Five models are evaluated (`harness/models.py:MODELS`):
 |---|---|---|
 | GPT-4o | OpenAI | API |
 | Claude 4.6 Sonnet (`claude-sonnet-5`) | Anthropic | API |
-| Meta-Llama-3.1-8B-Instruct | Meta | Open (via HF Inference API) |
-| Mistral-7B | Mistral AI | Open (via HF Inference API) |
-| Qwen2.5-7B-Instruct | Alibaba / HuggingFace | Open (via HF Inference API) |
+| Meta-Llama-3.1-8B-Instruct | Meta | Open (via HF Inference Providers) |
+| Mistral-7B (`open-mistral-7b`) | Mistral AI | Open (via Mistral's own API) |
+| Qwen2.5-7B-Instruct | Alibaba / HuggingFace | Open (via HF Inference Providers) |
+
+Mistral-7B is called directly against Mistral AI's own API rather than through Hugging Face:
+no HF Inference Providers route currently serves a Mistral-7B-Instruct checkpoint with chat
+support. If that changes, it can be re-pointed at `"hf"` like the other two open models.
 
 ## Setup
 
 ```
 pip install -r requirements.txt
-cp .env.example .env   # then fill in ANTHROPIC_API_KEY, OPENAI_API_KEY, HF_TOKEN (never commit real keys)
+cp .env.example .env   # then fill in ANTHROPIC_API_KEY, OPENAI_API_KEY, HF_TOKEN, MISTRAL_API_KEY (never commit real keys)
 ```
+
+`HF_TOKEN` needs the "Make calls to Inference Providers" permission enabled (set when
+creating/regenerating the token at https://huggingface.co/settings/tokens) -- without it, Llama
+and Qwen calls 403 regardless of the model being valid.
 
 You only need to fill in the keys for the providers you intend to run; `--models` lets you run a
 subset (see below).
@@ -99,7 +108,8 @@ categories = 11 model calls; x 6 tasks = 66 calls per model; x 5 models = 330 ca
 
 `harness/models.py` exposes `call_model(provider, model_name, prompt)` plus the `MODELS` registry
 mapping a friendly name (used in `results.csv` and `--models`) to a `(provider, model_name)` pair.
-Three providers are wired up: `"anthropic"`, `"openai"`, and `"hf"` (Hugging Face Inference API,
-used for the open-weight models). To add another model, add an entry to `MODELS`; to add another
-provider, add a `_call_<provider>()` function in `models.py` and a branch in `call_model()`. For a
-one-off model not worth registering, use `python harness/run.py --provider <p> --model-name <name>`.
+Four providers are wired up: `"anthropic"`, `"openai"`, `"hf"` (Hugging Face Inference
+Providers), and `"mistral"` (Mistral AI's own API). To add another model, add an entry to
+`MODELS`; to add another provider, add a `_call_<provider>()` function in `models.py` and a
+branch in `call_model()`. For a one-off model not worth registering, use
+`python harness/run.py --provider <p> --model-name <name>`.

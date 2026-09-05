@@ -8,14 +8,18 @@ No API keys are hardcoded -- they are read from environment variables at call ti
 
 import os
 
+import requests
+
 DEFAULT_ANTHROPIC_MODEL = os.environ.get("ANTHROPIC_MODEL", "claude-sonnet-5")
 DEFAULT_MAX_TOKENS = 1024
 
 # Friendly name (as used in results.csv and the paper's model table) -> provider + the exact
-# model identifier passed to that provider's API. The three open-weight models are called
-# through the Hugging Face Inference API rather than run locally, since they are 7-8B instruct
-# checkpoints that would otherwise require local GPU inference. Override any of the HF repo IDs
-# via env vars if a provider's hosted route for a given checkpoint changes.
+# model identifier passed to that provider's API. Llama and Qwen are called through the Hugging
+# Face Inference Providers marketplace (7-8B instruct checkpoints that would otherwise require
+# local GPU inference). Mistral-7B is called directly against Mistral AI's own API instead --
+# no current HF Inference Providers route serves a Mistral-7B-Instruct checkpoint with chat
+# support, but Mistral's own platform hosts the original open 7B checkpoint as "open-mistral-7b".
+# Override any of the hosted repo IDs via env vars if a provider's route for a checkpoint changes.
 MODELS = {
     "gpt-4o": {
         "provider": "openai",
@@ -30,8 +34,8 @@ MODELS = {
         "model_name": os.environ.get("HF_LLAMA_MODEL", "meta-llama/Meta-Llama-3.1-8B-Instruct"),
     },
     "Mistral-7B": {
-        "provider": "hf",
-        "model_name": os.environ.get("HF_MISTRAL_MODEL", "mistralai/Mistral-7B-Instruct-v0.3"),
+        "provider": "mistral",
+        "model_name": os.environ.get("MISTRAL_MODEL", "open-mistral-7b"),
     },
     "Qwen2.5-7B-Instruct": {
         "provider": "hf",
@@ -48,6 +52,8 @@ def call_model(provider: str, model_name: str, prompt: str) -> str:
         return _call_openai(model_name, prompt)
     if provider in ("hf", "huggingface"):
         return _call_hf(model_name, prompt)
+    if provider == "mistral":
+        return _call_mistral(model_name, prompt)
     raise ValueError(f"Unknown provider: {provider!r}")
 
 
@@ -104,3 +110,26 @@ def _call_hf(model_name: str, prompt: str) -> str:
         max_tokens=DEFAULT_MAX_TOKENS,
     )
     return response.choices[0].message.content or ""
+
+
+def _call_mistral(model_name: str, prompt: str) -> str:
+    api_key = os.environ.get("MISTRAL_API_KEY")
+    if not api_key:
+        raise RuntimeError(
+            "MISTRAL_API_KEY is not set. Export it in your environment (do not commit it)."
+        )
+
+    # Called directly against Mistral AI's own API (OpenAI-compatible REST, no SDK dependency)
+    # rather than through Hugging Face -- see the MODELS registry comment above for why.
+    response = requests.post(
+        "https://api.mistral.ai/v1/chat/completions",
+        headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+        json={
+            "model": model_name,
+            "messages": [{"role": "user", "content": prompt}],
+            "max_tokens": DEFAULT_MAX_TOKENS,
+        },
+        timeout=60,
+    )
+    response.raise_for_status()
+    return response.json()["choices"][0]["message"]["content"] or ""

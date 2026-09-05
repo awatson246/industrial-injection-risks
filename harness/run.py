@@ -86,14 +86,16 @@ def build_prompt(prompt_template: str, schema: dict, document: str) -> str:
     )
 
 
-def save_output(task_name: str, label: str, raw_output: str) -> None:
-    task_out_dir = OUTPUTS_DIR / task_name
+def save_output(model_label: str, task_name: str, output_label: str, raw_output: str) -> None:
+    # Namespaced by model first -- multiple models' raw transcripts for the same
+    # (task, category, variant) must not collide on the same file path.
+    task_out_dir = OUTPUTS_DIR / model_label / task_name
     task_out_dir.mkdir(parents=True, exist_ok=True)
-    (task_out_dir / f"{label}.txt").write_text(raw_output, encoding="utf-8")
+    (task_out_dir / f"{output_label}.txt").write_text(raw_output, encoding="utf-8")
 
 
 def run(provider: str, model_name: str, num_variants: int, model_label: str | None = None) -> list[dict]:
-    label = model_label or model_name
+    model_label = model_label or model_name
     payload_library = load_payload_library()
     rows: list[dict] = []
 
@@ -109,19 +111,19 @@ def run(provider: str, model_name: str, num_variants: int, model_label: str | No
             raw_output = call_model(provider, model_name, baseline_prompt)
         except Exception as exc:  # noqa: BLE001 -- surfaced into results for later review
             raw_output = f"<ERROR calling model: {exc}>"
-        save_output(task_name, "baseline", raw_output)
+        save_output(model_label, task_name, "baseline", raw_output)
         broke, evidence = score_baseline(raw_output, schema)
         rows.append(
             {
                 "task": task_name,
                 "payload_category": "baseline",
                 "payload_variant": "baseline",
-                "model": label,
+                "model": model_label,
                 "success_bool": broke,
                 "evidence": evidence,
             }
         )
-        print(f"[{label}][{task_name}/baseline] schema_broke_unprompted={broke}")
+        print(f"[{model_label}][{task_name}/baseline] schema_broke_unprompted={broke}")
 
         # --- Payload categories x variants ---
         for category, variants in payload_library.items():
@@ -135,8 +137,8 @@ def run(provider: str, model_name: str, num_variants: int, model_label: str | No
                 except Exception as exc:  # noqa: BLE001
                     raw_output = f"<ERROR calling model: {exc}>"
 
-                label = f"{category}_{variant['id']}"
-                save_output(task_name, label, raw_output)
+                output_label = f"{category}_{variant['id']}"
+                save_output(model_label, task_name, output_label, raw_output)
 
                 success, evidence = score_output(
                     category=category,
@@ -150,12 +152,12 @@ def run(provider: str, model_name: str, num_variants: int, model_label: str | No
                         "task": task_name,
                         "payload_category": category,
                         "payload_variant": variant["id"],
-                        "model": label,
+                        "model": model_label,
                         "success_bool": success,
                         "evidence": evidence,
                     }
                 )
-                print(f"[{label}][{task_name}/{category}/{variant['id']}] success={success} :: {evidence}")
+                print(f"[{model_label}][{task_name}/{category}/{variant['id']}] success={success} :: {evidence}")
                 time.sleep(0.2)  # light rate-limit courtesy
 
     return rows
@@ -187,7 +189,7 @@ def main() -> None:
     )
     parser.add_argument(
         "--provider",
-        choices=["anthropic", "openai", "hf"],
+        choices=["anthropic", "openai", "hf", "mistral"],
         help="Ad hoc mode: run a single provider/model-name pair not in the MODELS registry.",
     )
     parser.add_argument("--model-name", help="Model name/ID to use with --provider in ad hoc mode.")
