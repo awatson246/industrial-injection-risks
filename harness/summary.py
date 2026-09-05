@@ -1,13 +1,16 @@
 """
 Reads results/results.csv and produces:
   - a printed heatmap-style table: injection success rate by task (rows) x payload
-    category (columns), averaged across all evaluated models
+    category (columns), averaged across all evaluated models, doc variants, and injection methods
   - results/heatmap_task_category.png: the same table rendered as a compliance-heatmap figure
   - a printed heatmap-style table: injection success rate by model (rows) x payload
-    category (columns), averaged across all tasks -- the cross-model comparison
+    category (columns) -- the cross-model comparison
   - results/heatmap_model_category.png: the same table rendered as a figure
+  - a printed heatmap-style table: injection success rate by injection method (passive vs.
+    active) x payload category -- the delivery-method comparison
+  - results/heatmap_injectionmethod_category.png: the same table rendered as a figure
   - a short printed text summary of the most/least vulnerable task, model, and most/least
-    effective payload category
+    effective payload category and injection method
 
 Usage:
     python harness/summary.py
@@ -21,6 +24,7 @@ ROOT = Path(__file__).resolve().parent.parent
 RESULTS_CSV = ROOT / "results" / "results.csv"
 TASK_HEATMAP_PNG = ROOT / "results" / "heatmap_task_category.png"
 MODEL_HEATMAP_PNG = ROOT / "results" / "heatmap_model_category.png"
+METHOD_HEATMAP_PNG = ROOT / "results" / "heatmap_injectionmethod_category.png"
 
 CATEGORY_ORDER = ["override", "suppress", "falsify", "schema_break", "exfiltrate"]
 
@@ -80,10 +84,11 @@ def plot_heatmap(pivot: pd.DataFrame, title: str, png_path: Path) -> None:
     print(f"\nSaved heatmap figure to {png_path}")
 
 
-def print_text_summary(task_pivot: pd.DataFrame, model_pivot: pd.DataFrame) -> None:
+def print_text_summary(task_pivot: pd.DataFrame, model_pivot: pd.DataFrame, method_pivot: pd.DataFrame) -> None:
     task_avg = task_pivot.mean(axis=1).sort_values(ascending=False)
     category_avg = task_pivot.mean(axis=0).sort_values(ascending=False)
     model_avg = model_pivot.mean(axis=1).sort_values(ascending=False)
+    method_avg = method_pivot.mean(axis=1).sort_values(ascending=False)
 
     print("\n--- Summary ---")
     print(f"Most vulnerable task:   {task_avg.index[0]} ({task_avg.iloc[0]:.0f}% avg success)")
@@ -93,6 +98,9 @@ def print_text_summary(task_pivot: pd.DataFrame, model_pivot: pd.DataFrame) -> N
     if len(model_avg) > 1:
         print(f"Most vulnerable model:  {model_avg.index[0]} ({model_avg.iloc[0]:.0f}% avg success)")
         print(f"Least vulnerable model: {model_avg.index[-1]} ({model_avg.iloc[-1]:.0f}% avg success)")
+    if len(method_avg) > 1:
+        print(f"More effective injection method: {method_avg.index[0]} ({method_avg.iloc[0]:.0f}% avg success) "
+              f"vs. {method_avg.index[-1]} ({method_avg.iloc[-1]:.0f}%)")
 
 
 def main() -> None:
@@ -102,14 +110,18 @@ def main() -> None:
     df = load_attack_rows()
     task_pivot = build_pivot(df, index="task")
     model_pivot = build_pivot(df, index="model")
+    method_pivot = build_pivot(df, index="injection_method") if "injection_method" in df.columns else pd.DataFrame()
 
     n_models = df["model"].nunique()
-    task_title = (
-        f"Injection success rate (%) by task x payload category (averaged across {n_models} model(s))"
-        if n_models > 1
-        else "Injection success rate (%) by task x payload category"
-    )
-    print_text_heatmap(task_pivot, "task", task_title)
+    n_methods = df["injection_method"].nunique() if "injection_method" in df.columns else 1
+    qualifiers = []
+    if n_models > 1:
+        qualifiers.append(f"{n_models} models")
+    if n_methods > 1:
+        qualifiers.append(f"{n_methods} injection methods")
+    qualifier_str = f" (averaged across {', '.join(qualifiers)})" if qualifiers else ""
+
+    print_text_heatmap(task_pivot, "task", f"Injection success rate (%) by task x payload category{qualifier_str}")
     try:
         plot_heatmap(task_pivot, "Prompt-Injection Success Rate by Task x Payload Category", TASK_HEATMAP_PNG)
     except ImportError:
@@ -117,14 +129,29 @@ def main() -> None:
 
     if n_models > 1:
         print_text_heatmap(
-            model_pivot, "model", "Injection success rate (%) by model x payload category (averaged across 6 tasks)"
+            model_pivot, "model", "Injection success rate (%) by model x payload category (averaged across tasks/docs/methods)"
         )
         try:
             plot_heatmap(model_pivot, "Prompt-Injection Success Rate by Model x Payload Category", MODEL_HEATMAP_PNG)
         except ImportError:
             pass
 
-    print_text_summary(task_pivot, model_pivot)
+    if n_methods > 1:
+        print_text_heatmap(
+            method_pivot,
+            "injection_method",
+            "Injection success rate (%) by injection method x payload category (averaged across tasks/docs/models)",
+        )
+        try:
+            plot_heatmap(
+                method_pivot,
+                "Prompt-Injection Success Rate: Passive (document) vs. Active (prompt) Delivery",
+                METHOD_HEATMAP_PNG,
+            )
+        except ImportError:
+            pass
+
+    print_text_summary(task_pivot, model_pivot, method_pivot)
 
 
 if __name__ == "__main__":
