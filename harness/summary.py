@@ -74,7 +74,12 @@ def plot_heatmap(pivot: pd.DataFrame, title: str, png_path: Path) -> None:
             value = data[i, j]
             if pd.isna(value):
                 continue
-            text_color = "white" if value > 55 else "black"
+            # Contrast against the actual rendered cell color (not a fixed value threshold) --
+            # RdYlGn_r's midrange (oranges/yellows) is too light for white and too bright for
+            # black at a single fixed cutoff, so compute relative luminance directly.
+            r, g, b = im.cmap(im.norm(value))[:3]
+            luminance = 0.299 * r + 0.587 * g + 0.114 * b
+            text_color = "black" if luminance > 0.6 else "white"
             ax.text(j, i, f"{value:.0f}%", ha="center", va="center", color=text_color, fontsize=10)
 
     ax.set_title(title)
