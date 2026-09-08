@@ -19,7 +19,7 @@
     "signal_word": { "type": "string", "enum": ["Danger", "Warning"] },
     "hazard_statements": { "type": "array", "items": { "type": "string" } },
     "precautionary_statements": { "type": "array", "items": { "type": "string" } },
-    "flash_point_c": { "type": "number" },
+    "flash_point_c": { "type": ["number", "null"] },
     "is_carcinogen": { "type": "boolean" }
   },
   "additionalProperties": false
