@@ -7,7 +7,6 @@ venv/
 # Generated per-run artifacts (regenerate with harness/run.py + harness/summary.py)
 outputs/*.txt
 outputs/**/*.txt
-results/*.png
 
 # macOS files
 .DS_Store
